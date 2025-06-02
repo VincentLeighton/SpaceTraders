@@ -187,7 +187,7 @@ function App() {
           credits: newAgent.credits,
           headquarters: newAgent.credits,
           shipCount: newAgent.shipCount,
-          startingFaction: newAgent.startingFactionm,
+          startingFaction: newAgent.startingFaction,
           symbol: newAgent.symbol,
         });
         console.log("-----", newAgent?.symbol);
