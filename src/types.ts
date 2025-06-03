@@ -141,26 +141,65 @@ export type Ship = {
 };
 
 export type Nav = {
-    systemSymbol: string;
-    waypointSymbol: string;
-    route: {
-      destination: {
-        symbol: string;
-        type: string;
-        systemSymbol: string;
-        x: number;
-        y: number;
-      };
-      origin: {
-        symbol: string;
-        type: string;
-        systemSymbol: string;
-        x: number;
-        y: number;
-      };
-      departureTime: string;
-      arrival: string;
+  systemSymbol: string;
+  waypointSymbol: string;
+  route: {
+    destination: {
+      symbol: string;
+      type: string;
+      systemSymbol: string;
+      x: number;
+      y: number;
     };
-    status: string;
-    flightMode: string;
+    origin: {
+      symbol: string;
+      type: string;
+      systemSymbol: string;
+      x: number;
+      y: number;
+    };
+    departureTime: string;
+    arrival: string;
   };
+  status: string;
+  flightMode: string;
+};
+
+export type ServerStatus = {
+  status: string;
+  version: string;
+  resetDate: string;
+  description: string;
+  stats: {
+    accounts: number;
+    agents: number;
+    ships: number;
+    systems: number;
+    waypoints: number;
+  };
+  health: {
+    lastMarketUpdate: string;
+  };
+  leaderboards: {
+    mostCredits: Array<{
+      agentSymbol: string;
+      credits: number;
+    }>;
+    mostSubmittedCharts: Array<{
+      agentSymbol: string;
+      chartCount: number;
+    }>;
+  };
+  serverResets: {
+    next: string;
+    frequency: string;
+  };
+  announcements: Array<{
+    title: string;
+    body: string;
+  }>;
+  links: Array<{
+    name: string;
+    url: string;
+  }>;
+};

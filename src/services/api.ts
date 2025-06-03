@@ -1,5 +1,5 @@
 import axios, { AxiosHeaders } from "axios";
-import { type Agent, type Ship, type Nav } from "../types";
+import { type Agent, type Ship, type Nav, type ServerStatus } from "../types";
 
 const agentToken = import.meta.env.VITE_REACT_APP_AGENT_TOKEN;
 
@@ -9,6 +9,16 @@ const headers = new AxiosHeaders({
   Authorization: `Bearer ${agentToken}`,
 });
 
+export const getServerStatus = async (): Promise<ServerStatus> => {
+  try {
+    const response = await axios.get(baseUrl, { headers });
+    console.log("Server Status:", response);
+    return response.data.data as ServerStatus;
+  } catch (error) {
+    console.error(error);
+    throw error;
+  }
+};
 export const getAgent = async (): Promise<Agent> => {
   try {
     const response = await axios.get(`${baseUrl}my/agent`, { headers });
@@ -59,7 +69,6 @@ export const orbitShip = async (ship: Ship) : Promise<Nav> => {
     throw error;
   }
 };
-
 export const dockShip = async (ship: Ship) : Promise<Nav> => {
   try {
     const response = await axios.post(
@@ -74,3 +83,4 @@ export const dockShip = async (ship: Ship) : Promise<Nav> => {
     throw error;
   }
 };
+

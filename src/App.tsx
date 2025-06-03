@@ -6,13 +6,15 @@ import {
   dockShip,
   orbitShip,
   scanShipWaypoints,
+  getServerStatus
 } from "./services/api";
-import { type Agent, type Ship, type Nav } from "./types";
+import { type Agent, type Ship, type Nav, type ServerStatus } from "./types";
 
 function App() {
   const [loaded, setLoaded] = useState(false);
   const [agentData, setAgentData] = useState<Agent>();
   const [ships, setShips] = useState<Ship[]>([]);
+  const [serverStatus, setServerStatus] = useState<ServerStatus>();
 
   useEffect(() => {
     // update to "Use" function - Jim said to check it out
@@ -34,6 +36,16 @@ function App() {
         console.log(e.message);
       }
     }
+    async function loadStatus() {
+      try {
+        const newStatus = (await getServerStatus()) as unknown as ServerStatus;
+        setServerStatus(newStatus);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } catch (e: any) {
+        console.log(e.message);
+      }
+    }
+    loadStatus();
     loadAgent()
       .then(loadShips)
       .finally(() => {
