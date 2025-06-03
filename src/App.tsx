@@ -1,257 +1,85 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, use } from "react";
 import "./App.css";
-import axios, { AxiosHeaders } from "axios";
-
-const accountToken = import.meta.env.VITE_REACT_APP_ACCOUNT_TOKEN;
-const agentToken = import.meta.env.VITE_REACT_APP_AGENT_TOKEN;
-
-type agent = {
-  accountId: string;
-  credits: number;
-  headquarters: string;
-  shipCount: number;
-  startingFaction: string;
-  symbol: string;
-};
-
-type Ship = {
-  symbol: "string";
-  registration: {
-    name: "string";
-    factionSymbol: "string";
-    role: "FABRICATOR";
-  };
-  nav: {
-    systemSymbol: "string";
-    waypointSymbol: "string";
-    route: {
-      destination: {
-        symbol: "string";
-        type: "PLANET";
-        systemSymbol: "string";
-        x: 1;
-        y: 1;
-      };
-      origin: {
-        symbol: "string";
-        type: "PLANET";
-        systemSymbol: "string";
-        x: 1;
-        y: 1;
-      };
-      departureTime: "2025-06-02T01:18:46.881Z";
-      arrival: "2025-06-02T01:18:46.881Z";
-    };
-    status: "IN_TRANSIT";
-    flightMode: "CRUISE";
-  };
-  crew: {
-    current: 1;
-    required: 1;
-    capacity: 1;
-    rotation: "STRICT";
-    morale: 1;
-    wages: 1;
-  };
-  frame: {
-    symbol: "FRAME_PROBE";
-    name: "string";
-    condition: 1;
-    integrity: 1;
-    description: "string";
-    moduleSlots: 1;
-    mountingPoints: 1;
-    fuelCapacity: 1;
-    requirements: {
-      power: 1;
-      crew: 1;
-      slots: 1;
-    };
-    quality: 1;
-  };
-  reactor: {
-    symbol: "REACTOR_SOLAR_I";
-    name: "string";
-    condition: 1;
-    integrity: 1;
-    description: "string";
-    powerOutput: 1;
-    requirements: {
-      power: 1;
-      crew: 1;
-      slots: 1;
-    };
-    quality: 1;
-  };
-  engine: {
-    symbol: "ENGINE_IMPULSE_DRIVE_I";
-    name: "string";
-    condition: 1;
-    integrity: 1;
-    description: "string";
-    speed: 1;
-    requirements: {
-      power: 1;
-      crew: 1;
-      slots: 1;
-    };
-    quality: 1;
-  };
-  modules: [
-    {
-      symbol: "MODULE_MINERAL_PROCESSOR_I";
-      name: "string";
-      description: "string";
-      capacity: 1;
-      range: 1;
-      requirements: {
-        power: 1;
-        crew: 1;
-        slots: 1;
-      };
-    }
-  ];
-  mounts: [
-    {
-      symbol: "MOUNT_GAS_SIPHON_I";
-      name: "string";
-      description: "string";
-      strength: 1;
-      deposits: ["QUARTZ_SAND"];
-      requirements: {
-        power: 1;
-        crew: 1;
-        slots: 1;
-      };
-    }
-  ];
-  cargo: {
-    capacity: 1;
-    units: 1;
-    inventory: [
-      {
-        symbol: "PRECIOUS_STONES";
-        name: "string";
-        description: "string";
-        units: 1;
-      }
-    ];
-  };
-  fuel: {
-    current: 1;
-    capacity: 1;
-    consumed: {
-      amount: 1;
-      timestamp: "2025-06-02T01:18:46.881Z";
-    };
-  };
-  cooldown: {
-    shipSymbol: "string";
-    totalSeconds: 1;
-    remainingSeconds: 1;
-    expiration: "2025-06-02T01:18:46.881Z";
-  };
-};
+import {
+  getAgent,
+  getShips,
+  dockShip,
+  orbitShip,
+  scanShipWaypoints,
+} from "./services/api";
+import { type Agent, type Ship, type Nav } from "./types";
 
 function App() {
   const [loaded, setLoaded] = useState(false);
-  const [agentData, setAgentData] = useState<agent>();
-  const [ships, setShips] = useState<Ship[]>();
-  const baseUrl = "https://api.spacetraders.io/v2/";
-  const headers = new AxiosHeaders({
-    "Content-Type": "application/json",
-    Authorization: `Bearer ${agentToken}`,
-  });
+  const [agentData, setAgentData] = useState<Agent>();
+  const [ships, setShips] = useState<Ship[]>([]);
+  const terminalScreen = document.getElementById("terminalScreen");
 
+  const lorem = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Duis ac metus et turpis maximus fringilla. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut nec gravida metus, a pulvinar dui. Donec lobortis accumsan enim eget finibus.'
   useEffect(() => {
-    getAgent().then(getShips);
+    // update to "Use" function - Jim said to check it out
+    async function loadAgent() {
+      try {
+        const newAgent = (await getAgent()) as unknown as Agent;
+        setAgentData(newAgent);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } catch (e: any) {
+        console.log(e.message);
+      }
+    }
+    async function loadShips() {
+      try {
+        const newShips = (await getShips()) as unknown as Ship[];
+        setShips(newShips);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } catch (e: any) {
+        console.log(e.message);
+      }
+    }
+    loadAgent()
+      .then(loadShips)
+      .finally(() => {
+        setLoaded(true);
+      });
   }, []);
 
-  // const switchDocked = (s: Ship)=>{
-  //   if(s.nav.status != 'DOCKED'){
-  //     dockShip()
-  //   }
-  //   else{
-  //     orbitShip()
-  //   }
-  // }
+  const switchDocked = async (ship: Ship, i: number) => {
+    let newNav = {} as Nav;
+    if (ship.nav.status != "DOCKED") {
+      newNav = (await dockShip(ship)) as unknown as Nav;
+    } else {
+      newNav = (await orbitShip(ship)) as unknown as Nav;
+    }
+    setShips((curShips) => {
+      const newShips = [...curShips];
+      newShips[i] = { ...newShips[i], nav: newNav };
+      console.log("new ships here:", newShips);
+      return newShips;
+    });
+  };
 
-  const getAgent = async () => {
-    axios
-      .get(`${baseUrl}my/agent`, { headers })
-      .then((response) => {
-        console.log("Agent Data:", response.data.data);
-        const newAgent = response.data.data;
-        setAgentData({
-          accountId: newAgent.accountId,
-          credits: newAgent.credits,
-          headquarters: newAgent.credits,
-          shipCount: newAgent.shipCount,
-          startingFaction: newAgent.startingFaction,
-          symbol: newAgent.symbol,
-        });
-        console.log("-----", newAgent?.symbol);
-      })
-      .catch((error) => {
-        console.error(error);
-      });
+  const typeText = (element: HTMLElement, text: string, delay: number) => {
+    let index = 0;
+    function addCharacter() {
+      if (index < text.length) {
+        element.textContent += text.charAt(index);
+        index++;
+        element.scrollTop = element.scrollHeight;
+        setTimeout(addCharacter, delay);
+      }
+    }
+    addCharacter();
   };
-  const getShips = async () => {
-    axios
-      .get(`${baseUrl}my/ships`, { headers })
-      .then((response) => {
-        console.log("Ships Data:", response.data.data);
-        const newShips = response.data.data;
-        setShips(
-          newShips.map((ship: Ship) => ({
-            ...ship,
-            symbol: ship.symbol,
-          }))
-        );
-        setLoaded(true);
-      })
-      .catch((error) => {
-        console.error(error);
-      });
-  };
-  const scanShipWaypoints = async () => {
-    axios
-      .post(`${baseUrl}my/ships/ZORVEN-1/scan/waypoints`, undefined, {
-        headers,
-      })
-      .then((response) => {
-        console.log("Scan Waypoints Response:", response.data);
-        setAgentData(response.data.data);
-      })
-      .catch((error) => {
-        console.error(error);
-      });
-  };
-  const orbitShip = async () => {
-    axios
-      .post(`${baseUrl}my/ships/ZORVEN-1/orbit`, undefined, {
-        headers,
-      })
-      .then((response) => {
-        console.log("Orbit Ship:", response.data);
-        setAgentData(response.data.data);
-      })
-      .catch((error) => {
-        console.error(error);
-      });
-  };
-  const dockShip = async () => {
-    axios
-      .post(`${baseUrl}my/ships/ZORVEN-1/dock`, undefined, {
-        headers,
-      })
-      .then((response) => {
-        console.log("Dock Ship:", response.data);
-        setAgentData(response.data.data);
-      })
-      .catch((error) => {
-        console.error(error);
-      });
+
+  const addText = (text: string) => {
+    console.log('outside');
+    
+    if (terminalScreen) {
+      console.log("in if terminal screen:", text);
+      
+      const textToDisplay = `${text}\n`;
+      typeText(terminalScreen, textToDisplay, 50); // 50ms delay per character
+    }
   };
 
   if (!loaded) {
@@ -259,21 +87,52 @@ function App() {
   }
   return (
     <>
-      <p>Agent: {agentData != undefined ? agentData.symbol : "no agent"}</p>
-      <p>Credits: {agentData != undefined ? agentData.credits : "no agent"}</p>
-      <p>Ship Count: {agentData != undefined ? agentData.shipCount : "no agent"}</p>
-      <p>Faction: {agentData != undefined ? agentData.startingFaction : "no agent"}</p>
-      
-      <div>
-        <p>Ships:</p>
-        {ships?.map((ship) => (
-          <div>
-            <p key={ship.symbol}>
-              {ship.symbol}
-            </p>
-          {/* <button onClick={()=>{switchDocked(ship)}}>{ship.nav.status}</button> */}
-          </div>
+      <div className="main">
+        <div className="agentInfo">
+          <p>Agent: {agentData != undefined ? agentData.symbol : "no agent"}</p>
+          <p>
+            Credits: {agentData != undefined ? agentData.credits : "no agent"}
+          </p>
+          <p>
+            Ship Count:{" "}
+            {agentData != undefined ? agentData.shipCount : "no agent"}
+          </p>
+          <p>
+            Faction:{" "}
+            {agentData != undefined ? agentData.startingFaction : "no agent"}
+          </p>
+        </div>
+
+        <div className="shipInfo">
+          <p>Ships:</p>
+          {/* <pre>{JSON.stringify(ships, null, 2)}</pre> */}
+          {ships?.map((ship, i) => (
+            <div key={ship.symbol}>
+              <p>{ship.symbol}</p>
+              <button
+                onClick={() => {
+                  switchDocked(ship, i);
+                }}
+              >
+                {ship.nav.status === "IN_ORBIT"
+                  ? "Dock"
+                  : ship.nav.status === "DOCKED"
+                  ? "Undock"
+                  : ship.nav.status}
+              </button>
+            </div>
           ))}
+        </div>
+      </div>
+      <div className="bottomTextArea">
+        <button
+          onClick={() => {
+            addText(lorem);
+          }}
+        >
+          Add Text
+        </button>
+        <div id="terminalScreen"></div>
       </div>
     </>
   );
