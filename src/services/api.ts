@@ -12,8 +12,8 @@ const headers = new AxiosHeaders({
 export const getServerStatus = async (): Promise<ServerStatus> => {
   try {
     const response = await axios.get(baseUrl, { headers });
-    console.log("Server Status:", response);
-    return response.data.data as ServerStatus;
+    // console.log("Server Status:", response.data);
+    return response.data as ServerStatus;
   } catch (error) {
     console.error(error);
     throw error;
@@ -22,7 +22,7 @@ export const getServerStatus = async (): Promise<ServerStatus> => {
 export const getAgent = async (): Promise<Agent> => {
   try {
     const response = await axios.get(`${baseUrl}my/agent`, { headers });
-    console.log("Agent Data in API:", response.data.data);
+    // console.log("Agent Data in API:", response.data.data);
     return response.data.data as Agent;
   } catch (error) {
     console.error(error);
@@ -32,7 +32,7 @@ export const getAgent = async (): Promise<Agent> => {
 export const getShips = async (): Promise<Ship[]> => {
   try {
     const response = await axios.get(`${baseUrl}my/ships`, { headers });
-    console.log("Ships Data:", response.data.data);
+    // console.log("Ships Data:", response.data.data);
     return response.data.data as Ship[];
   } catch (error) {
     console.error(error);
@@ -62,7 +62,7 @@ export const orbitShip = async (ship: Ship) : Promise<Nav> => {
       undefined,
       { headers }
     );
-    console.log("Orbit Ship:", response.data);
+    // console.log("Orbit Ship:", response.data);
     return response.data.data.nav;
   } catch (error) {
     console.error(error);
@@ -76,7 +76,7 @@ export const dockShip = async (ship: Ship) : Promise<Nav> => {
       undefined,
       { headers }
     );
-    console.log("Dock Ship:", response.data);
+    // console.log("Dock Ship:", response.data);
     return response.data.data.nav;
   } catch (error) {
     console.error(error);

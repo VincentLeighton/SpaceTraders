@@ -1,4 +1,4 @@
-import { useEffect, useState, use, useRef } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import "./App.css";
 import {
   getAgent,
@@ -6,7 +6,7 @@ import {
   dockShip,
   orbitShip,
   scanShipWaypoints,
-  getServerStatus
+  getServerStatus,
 } from "./services/api";
 import { type Agent, type Ship, type Nav, type ServerStatus } from "./types";
 
@@ -15,6 +15,15 @@ function App() {
   const [agentData, setAgentData] = useState<Agent>();
   const [ships, setShips] = useState<Ship[]>([]);
   const [serverStatus, setServerStatus] = useState<ServerStatus>();
+  const serverResetDate = useRef<Date>(new Date());
+
+  const [timer, setTimer] = useState(() => {
+    const now = new Date();
+    return Math.max(
+      0,
+      Math.floor((serverResetDate.current.getTime() - now.getTime()) / 1000)
+    );
+  });
 
   useEffect(() => {
     // update to "Use" function - Jim said to check it out
@@ -36,16 +45,6 @@ function App() {
         console.log(e.message);
       }
     }
-    async function loadStatus() {
-      try {
-        const newStatus = (await getServerStatus()) as unknown as ServerStatus;
-        setServerStatus(newStatus);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      } catch (e: any) {
-        console.log(e.message);
-      }
-    }
-    loadStatus();
     loadAgent()
       .then(loadShips)
       .finally(() => {
@@ -54,20 +53,68 @@ function App() {
   }, []);
 
   useEffect(() => {
-  if (loaded) {
-    typeToTerminal("Loading......");
-    typeToTerminal(`Welcome ${agentData?.symbol}, command is yours.`);
-  }
-}, [loaded]);
+    async function loadStatus() {
+      if (loaded) {
+        try {
+          const newStatus =
+            (await getServerStatus()) as unknown as ServerStatus;
+          setServerStatus(newStatus);
+          if (newStatus) {
+            serverResetDate.current = new Date(newStatus.serverResets.next);
+            // console.log("Next reset:", newStatus.serverResets.next);
+          }
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } catch (e: any) {
+          console.log(e.message);
+        }
+      }
+    }
+    loadStatus();
+  }, [loaded]);
+
+  useEffect(() => {
+    if (loaded) {
+      typeToTerminal("Loading......");
+      typeToTerminal(`Welcome ${agentData?.symbol}, command is yours.`);
+    }
+  }, [loaded]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = new Date();
+      const secondsLeft = Math.max(
+        0,
+        Math.floor((serverResetDate.current.getTime() - now.getTime()) / 1000)
+      );
+      setTimer(secondsLeft);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [timer, serverResetDate]);
+
+  function formatTime(seconds: number) {
+  const d = Math.floor(seconds / 86400)
+  .toString()
+    .padStart(2, "0");
+  const h = Math.floor((seconds / 3600) / 12)
+    .toString()
+    .padStart(2, "0");
+  const m = Math.floor((seconds % 3600) / 60)
+    .toString()
+    .padStart(2, "0");
+  const s = Math.floor(seconds % 60)
+    .toString()
+    .padStart(2, "0");
+  return `${d}:${h}:${m}:${s} `;
+}
 
   const switchDocked = async (ship: Ship, i: number) => {
     let newNav = {} as Nav;
     if (ship.nav.status != "DOCKED") {
       newNav = (await dockShip(ship)) as unknown as Nav;
-      typeToTerminal(`${ship.symbol} has docked.`)
+      typeToTerminal(`${ship.symbol} has docked.`);
     } else {
       newNav = (await orbitShip(ship)) as unknown as Nav;
-      typeToTerminal(`${ship.symbol} has undocked.`)
+      typeToTerminal(`${ship.symbol} has undocked.`);
     }
     setShips((curShips) => {
       const newShips = [...curShips];
@@ -118,6 +165,7 @@ function App() {
     <>
       <div className="main">
         <div className="agentInfo">
+          <p>Server Reset: {timer > 0 ? formatTime(timer) : "Time's up!"}</p>
           <p>Agent: {agentData != undefined ? agentData.symbol : "no agent"}</p>
           <p>
             Credits: {agentData != undefined ? agentData.credits : "no agent"}
