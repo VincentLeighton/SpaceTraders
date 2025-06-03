@@ -1,4 +1,4 @@
-import { useEffect, useState, use } from "react";
+import { useEffect, useState, use, useRef } from "react";
 import "./App.css";
 import {
   getAgent,
@@ -13,9 +13,7 @@ function App() {
   const [loaded, setLoaded] = useState(false);
   const [agentData, setAgentData] = useState<Agent>();
   const [ships, setShips] = useState<Ship[]>([]);
-  let terminalScreen: HTMLElement | null = null;
 
-  const lorem = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Duis ac metus et turpis maximus fringilla. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut nec gravida metus, a pulvinar dui. Donec lobortis accumsan enim eget finibus.'
   useEffect(() => {
     // update to "Use" function - Jim said to check it out
     async function loadAgent() {
@@ -43,12 +41,21 @@ function App() {
       });
   }, []);
 
+  useEffect(() => {
+  if (loaded) {
+    typeToTerminal("Loading......");
+    typeToTerminal(`Welcome ${agentData?.symbol}, command is yours.`);
+  }
+}, [loaded]);
+
   const switchDocked = async (ship: Ship, i: number) => {
     let newNav = {} as Nav;
     if (ship.nav.status != "DOCKED") {
       newNav = (await dockShip(ship)) as unknown as Nav;
+      typeToTerminal(`${ship.symbol} has docked.`)
     } else {
       newNav = (await orbitShip(ship)) as unknown as Nav;
+      typeToTerminal(`${ship.symbol} has undocked.`)
     }
     setShips((curShips) => {
       const newShips = [...curShips];
@@ -58,28 +65,38 @@ function App() {
     });
   };
 
-  const typeText = (element: HTMLElement, text: string, delay: number) => {
+  const terminalQueue = useRef<string[]>([]);
+  const typing = useRef(false);
+
+  const typeToTerminal = (text: string, delay: number = 50) => {
+    terminalQueue.current.push(text.endsWith("\n") ? text : text + "\n");
+    processQueue(delay);
+  };
+
+  const processQueue = (delay: number) => {
+    if (typing.current) return;
+    if (terminalQueue.current.length === 0) return;
+
+    typing.current = true;
+    const terminalScreen = document.getElementById("terminalScreen");
+    if (!terminalScreen) {
+      typing.current = false;
+      return;
+    }
+    const text = terminalQueue.current.shift()!;
     let index = 0;
     function addCharacter() {
       if (index < text.length) {
-        element.textContent += text.charAt(index);
+        terminalScreen!.textContent += text.charAt(index);
         index++;
-        element.scrollTop = element.scrollHeight;
+        terminalScreen!.scrollTop = terminalScreen!.scrollHeight;
         setTimeout(addCharacter, delay);
+      } else {
+        typing.current = false;
+        processQueue(delay); // Process next item in the queue
       }
     }
     addCharacter();
-  };
-
-  const addText = (text: string) => {
-    console.log('outside', terminalScreen);
-    terminalScreen = document.getElementById("terminalScreen");
-    if (terminalScreen) {
-      console.log("in if terminal screen:", text);
-      
-      const textToDisplay = `${text}\n`;
-      typeText(terminalScreen, textToDisplay, 25); // 50ms delay per character
-    }
   };
 
   if (!loaded) {
@@ -92,10 +109,6 @@ function App() {
           <p>Agent: {agentData != undefined ? agentData.symbol : "no agent"}</p>
           <p>
             Credits: {agentData != undefined ? agentData.credits : "no agent"}
-          </p>
-          <p>
-            Ship Count:{" "}
-            {agentData != undefined ? agentData.shipCount : "no agent"}
           </p>
           <p>
             Faction:{" "}
@@ -125,13 +138,6 @@ function App() {
         </div>
       </div>
       <div className="bottomTextArea">
-        <button
-          onClick={() => {
-            addText(lorem);
-          }}
-        >
-          Add Text
-        </button>
         <div id="terminalScreen"></div>
       </div>
     </>
