@@ -13,7 +13,7 @@ function App() {
   const [loaded, setLoaded] = useState(false);
   const [agentData, setAgentData] = useState<Agent>();
   const [ships, setShips] = useState<Ship[]>([]);
-  const terminalScreen = document.getElementById("terminalScreen");
+  let terminalScreen: HTMLElement | null = null;
 
   const lorem = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Duis ac metus et turpis maximus fringilla. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut nec gravida metus, a pulvinar dui. Donec lobortis accumsan enim eget finibus.'
   useEffect(() => {
@@ -72,13 +72,13 @@ function App() {
   };
 
   const addText = (text: string) => {
-    console.log('outside');
-    
+    console.log('outside', terminalScreen);
+    terminalScreen = document.getElementById("terminalScreen");
     if (terminalScreen) {
       console.log("in if terminal screen:", text);
       
       const textToDisplay = `${text}\n`;
-      typeText(terminalScreen, textToDisplay, 50); // 50ms delay per character
+      typeText(terminalScreen, textToDisplay, 25); // 50ms delay per character
     }
   };
 
