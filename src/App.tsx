@@ -1,14 +1,20 @@
-import { useEffect, useState, useMemo, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import "./App.css";
 import {
   getAgent,
   getShips,
   dockShip,
   orbitShip,
-  scanShipWaypoints,
+  scanWaypoints,
   getServerStatus,
 } from "./services/api";
-import { type Agent, type Ship, type Nav, type ServerStatus } from "./types";
+import {
+  type Agent,
+  type Ship,
+  type Nav,
+  type ServerStatus,
+  type ScanWaypointsResponse,
+} from "./types";
 
 function App() {
   const [loaded, setLoaded] = useState(false);
@@ -92,20 +98,20 @@ function App() {
   }, [timer, serverResetDate]);
 
   function formatTime(seconds: number) {
-  const d = Math.floor(seconds / 86400)
-  .toString()
-    .padStart(2, "0");
-  const h = Math.floor((seconds / 3600) / 12)
-    .toString()
-    .padStart(2, "0");
-  const m = Math.floor((seconds % 3600) / 60)
-    .toString()
-    .padStart(2, "0");
-  const s = Math.floor(seconds % 60)
-    .toString()
-    .padStart(2, "0");
-  return `${d}:${h}:${m}:${s} `;
-}
+    const d = Math.floor(seconds / 86400)
+      .toString()
+      .padStart(2, "0");
+    const h = Math.floor(seconds / 3600 / 12)
+      .toString()
+      .padStart(2, "0");
+    const m = Math.floor((seconds % 3600) / 60)
+      .toString()
+      .padStart(2, "0");
+    const s = Math.floor(seconds % 60)
+      .toString()
+      .padStart(2, "0");
+    return `${d}:${h}:${m}:${s} `;
+  }
 
   const switchDocked = async (ship: Ship, i: number) => {
     let newNav = {} as Nav;
@@ -122,6 +128,35 @@ function App() {
       console.log("new ships here:", newShips);
       return newShips;
     });
+  };
+
+  const scanForWaypoints = async (ship: Ship) => {
+    try {
+      const response = (await scanWaypoints(ship)) as ScanWaypointsResponse;
+      const newWaypoints = response.data.waypoints;
+      console.log('Response: ',response);
+      if (newWaypoints.length > 0) {
+        typeToTerminal(
+          `${newWaypoints.length} waypoints found in system ${newWaypoints[0].systemSymbol}.`
+        );
+        newWaypoints.forEach((waypoint) => {
+          typeToTerminal(`Waypoint: ${waypoint.symbol} Type: ${waypoint.type}`);
+        });
+      }
+    } catch (error: any) {
+      // handle error here
+      if (error.response && error.response.data) {
+        // Axios error with server message
+        typeToTerminal(
+          `Error: ${
+            error.response.data.error?.message || error.response.data.message
+          }`
+        );
+      } else {
+        // Network or other error
+        typeToTerminal(`Error: ${error.message || error.toString()}`);
+      }
+    }
   };
 
   const terminalQueue = useRef<string[]>([]);
@@ -192,6 +227,13 @@ function App() {
                   : ship.nav.status === "DOCKED"
                   ? "Undock"
                   : ship.nav.status}
+              </button>
+              <button
+                onClick={() => {
+                  scanForWaypoints(ship);
+                }}
+              >
+                Scan For Waypoints
               </button>
             </div>
           ))}

@@ -20,56 +20,32 @@ export const getServerStatus = async (): Promise<ServerStatus> => {
   }
 };
 export const getAgent = async (): Promise<Agent> => {
-  try {
-    const response = await axios.get(`${baseUrl}my/agent`, { headers });
-    // console.log("Agent Data in API:", response.data.data);
-    return response.data.data as Agent;
-  } catch (error) {
-    console.error(error);
-    throw error;
-  }
+  const response = await axios.get(`${baseUrl}my/agent`, { headers });
+  return response.data.data as Agent;
 };
+
 export const getShips = async (): Promise<Ship[]> => {
-  try {
-    const response = await axios.get(`${baseUrl}my/ships`, { headers });
-    // console.log("Ships Data:", response.data.data);
-    return response.data.data as Ship[];
-  } catch (error) {
-    console.error(error);
-    throw error;
-  }
+  const response = await axios.get(`${baseUrl}my/ships`, { headers });
+  return response.data.data as Ship[];
 };
-export const scanShipWaypoints = async () => {
-  try {
-    const response = await axios.post(
-      `${baseUrl}my/ships/ZORVEN-1/scan/waypoints`,
-      undefined,
-      {
-        headers,
-      }
-    );
-    console.log("Scan Waypoints Response:", response.data);
-    return response.data.data;
-  } catch (error) {
-    console.error(error);
-    throw error;
-  }
+
+export const scanWaypoints = async (ship: Ship) => {
+  const response = await axios.post(
+    `${baseUrl}my/ships/${ship.symbol}/scan/waypoints`,
+    undefined,
+    { headers }
+  );
+  return response.data;
 };
-export const orbitShip = async (ship: Ship) : Promise<Nav> => {
-  try {
-    const response = await axios.post(
-      `${baseUrl}my/ships/${ship.symbol}/orbit`,
-      undefined,
-      { headers }
-    );
-    // console.log("Orbit Ship:", response.data);
-    return response.data.data.nav;
-  } catch (error) {
-    console.error(error);
-    throw error;
-  }
+export const orbitShip = async (ship: Ship): Promise<Nav> => {
+  const response = await axios.post(
+    `${baseUrl}my/ships/${ship.symbol}/orbit`,
+    undefined,
+    { headers }
+  );
+  return response.data.data.nav;
 };
-export const dockShip = async (ship: Ship) : Promise<Nav> => {
+export const dockShip = async (ship: Ship): Promise<Nav> => {
   try {
     const response = await axios.post(
       `${baseUrl}my/ships/${ship.symbol}/dock`,
@@ -83,4 +59,3 @@ export const dockShip = async (ship: Ship) : Promise<Nav> => {
     throw error;
   }
 };
-

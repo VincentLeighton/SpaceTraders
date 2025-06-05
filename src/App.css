@@ -47,3 +47,23 @@
   text-align: left;
   /* Add styling for the cursor if needed */
 }
+
+/* #terminalScreen > :last-child::after { */
+#terminalScreen>.terminal-caret{
+  display: inline-block;
+  width: 0.7em;
+  height: 1.2em;
+  background: lime;
+  margin-left: 2px;
+  vertical-align: bottom;
+  animation: blink-caret 1s steps(1) infinite;
+}
+
+@keyframes blink-caret {
+  0%, 60% {
+    opacity: 1;
+  }
+  61%, 100% {
+    opacity: 0;
+  }
+}

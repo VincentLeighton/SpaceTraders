@@ -203,3 +203,37 @@ export type ServerStatus = {
     url: string;
   }>;
 };
+
+export type ScanWaypointsResponse = {
+  data: {
+    cooldown: {
+      shipSymbol: string;
+      totalSeconds: number;
+      remainingSeconds: number;
+      expiration: string;
+    };
+    waypoints: Array<{
+      symbol: string;
+      type: string;
+      systemSymbol: string;
+      x: number;
+      y: number;
+      orbitals: Array<{
+        symbol: string;
+      }>;
+      faction: {
+        symbol: string;
+      };
+      traits: Array<{
+        symbol: string;
+        name: string;
+        description: string;
+      }>;
+      chart: {
+        waypointSymbol: string;
+        submittedBy: string;
+        submittedOn: string;
+      };
+    }>;
+  };
+};
