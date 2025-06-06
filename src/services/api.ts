@@ -1,5 +1,5 @@
 import axios, { AxiosHeaders } from "axios";
-import { type Agent, type Ship, type Nav, type ServerStatus } from "../types";
+import { type Agent, type Ship, type Nav, type ServerStatus, type AccountData } from "../types";
 
 const agentToken = import.meta.env.VITE_REACT_APP_AGENT_TOKEN;
 
@@ -19,8 +19,29 @@ export const getServerStatus = async (): Promise<ServerStatus> => {
     throw error;
   }
 };
+
+export const getAccount = async (): Promise<AccountData> => {
+  try {
+    const response = await axios.get(`${baseUrl}my/account`, { headers });
+    console.log('Accoutn Response: ',response);
+    
+    return response.data as AccountData;
+  } catch (error) {
+    console.error(error);
+    throw error;
+  }
+};
+
 export const getAgent = async (): Promise<Agent> => {
   const response = await axios.get(`${baseUrl}my/agent`, { headers });
+  // return {
+  //   accountId: '',
+  //   symbol: '',
+  //   headquarters: '',
+  //   credits: 0,
+  //   startingFaction: '',
+  //   shipCount: 0,
+  // } as Agent;
   return response.data.data as Agent;
 };
 

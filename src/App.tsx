@@ -7,6 +7,7 @@ import {
   orbitShip,
   scanWaypoints,
   getServerStatus,
+  getAccount,
 } from "./services/api";
 import {
   type Agent,
@@ -15,13 +16,17 @@ import {
   type ServerStatus,
   type ScanWaypointsResponse,
 } from "./types";
+import ServerResetTimer from "./ServerResetTimer";
+import TerminalScreen, { type TerminalScreenHandle } from "./TerminalScreen";
+import DialogBox from "./DialogBox";
 
 function App() {
+  const [agentValid, setAgentValid] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [agentData, setAgentData] = useState<Agent>();
   const [ships, setShips] = useState<Ship[]>([]);
-  const [serverStatus, setServerStatus] = useState<ServerStatus>();
   const serverResetDate = useRef<Date>(new Date());
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   const [timer, setTimer] = useState(() => {
     const now = new Date();
@@ -31,15 +36,52 @@ function App() {
     );
   });
 
+  const terminalRef = useRef<TerminalScreenHandle>(null);
+
+  useEffect(() => {
+    const isAgentValid = async () => {
+      try {
+        await getAccount();
+        setAgentValid(true);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } catch (e: any) {
+        console.log("Agent Invalid:",e.message);
+      }
+    };
+    isAgentValid();
+  }, []);
+
+  useEffect(() => {
+    async function loadStatus() {
+      if (loaded) {
+        try {
+          const newStatus =
+            (await getServerStatus()) as unknown as ServerStatus;
+          if (newStatus) {
+            serverResetDate.current = new Date(newStatus.serverResets.next);
+            // console.log("Next reset:", newStatus.serverResets.next);
+          }
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } catch (e: any) {
+          console.log(e.message);
+        }
+      }
+    }
+    loadStatus();
+  }, [loaded]);
+
   useEffect(() => {
     // update to "Use" function - Jim said to check it out
     async function loadAgent() {
       try {
         const newAgent = (await getAgent()) as unknown as Agent;
         setAgentData(newAgent);
+        console.log("Agent Data: ", newAgent);
+
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (e: any) {
-        console.log(e.message);
+        console.log("LoadAgent Error: ", e.message);
+        setDialogOpen(true);
       }
     }
     async function loadShips() {
@@ -59,31 +101,13 @@ function App() {
   }, []);
 
   useEffect(() => {
-    async function loadStatus() {
-      if (loaded) {
-        try {
-          const newStatus =
-            (await getServerStatus()) as unknown as ServerStatus;
-          setServerStatus(newStatus);
-          if (newStatus) {
-            serverResetDate.current = new Date(newStatus.serverResets.next);
-            // console.log("Next reset:", newStatus.serverResets.next);
-          }
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        } catch (e: any) {
-          console.log(e.message);
-        }
-      }
+    if (loaded && terminalRef.current) {
+      terminalRef.current.typeToTerminal("Loading......");
+      terminalRef.current.typeToTerminal(
+        `Welcome ${agentData?.symbol}, command is yours.`
+      );
     }
-    loadStatus();
-  }, [loaded]);
-
-  useEffect(() => {
-    if (loaded) {
-      typeToTerminal("Loading......");
-      typeToTerminal(`Welcome ${agentData?.symbol}, command is yours.`);
-    }
-  }, [loaded]);
+  }, [loaded, agentData?.symbol]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -97,30 +121,14 @@ function App() {
     return () => clearInterval(interval);
   }, [timer, serverResetDate]);
 
-  function formatTime(seconds: number) {
-    const d = Math.floor(seconds / 86400)
-      .toString()
-      .padStart(2, "0");
-    const h = Math.floor(seconds / 3600 / 12)
-      .toString()
-      .padStart(2, "0");
-    const m = Math.floor((seconds % 3600) / 60)
-      .toString()
-      .padStart(2, "0");
-    const s = Math.floor(seconds % 60)
-      .toString()
-      .padStart(2, "0");
-    return `${d}:${h}:${m}:${s} `;
-  }
-
   const switchDocked = async (ship: Ship, i: number) => {
     let newNav = {} as Nav;
     if (ship.nav.status != "DOCKED") {
       newNav = (await dockShip(ship)) as unknown as Nav;
-      typeToTerminal(`${ship.symbol} has docked.`);
+      terminalRef.current?.typeToTerminal(`${ship.symbol} has docked.`);
     } else {
       newNav = (await orbitShip(ship)) as unknown as Nav;
-      typeToTerminal(`${ship.symbol} has undocked.`);
+      terminalRef.current?.typeToTerminal(`${ship.symbol} has undocked.`);
     }
     setShips((curShips) => {
       const newShips = [...curShips];
@@ -134,63 +142,34 @@ function App() {
     try {
       const response = (await scanWaypoints(ship)) as ScanWaypointsResponse;
       const newWaypoints = response.data.waypoints;
-      console.log('Response: ',response);
+      console.log("Response: ", response);
       if (newWaypoints.length > 0) {
-        typeToTerminal(
+        terminalRef.current?.typeToTerminal(
           `${newWaypoints.length} waypoints found in system ${newWaypoints[0].systemSymbol}.`
         );
         newWaypoints.forEach((waypoint) => {
-          typeToTerminal(`Waypoint: ${waypoint.symbol} Type: ${waypoint.type}`);
+          terminalRef.current?.typeToTerminal(
+            `Waypoint: ${waypoint.symbol} Type: ${waypoint.type}`
+          );
         });
       }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       // handle error here
       if (error.response && error.response.data) {
         // Axios error with server message
-        typeToTerminal(
+        terminalRef.current?.typeToTerminal(
           `Error: ${
             error.response.data.error?.message || error.response.data.message
           }`
         );
       } else {
         // Network or other error
-        typeToTerminal(`Error: ${error.message || error.toString()}`);
+        terminalRef.current?.typeToTerminal(
+          `Error: ${error.message || error.toString()}`
+        );
       }
     }
-  };
-
-  const terminalQueue = useRef<string[]>([]);
-  const typing = useRef(false);
-
-  const typeToTerminal = (text: string, delay: number = 50) => {
-    terminalQueue.current.push(text.endsWith("\n") ? text : text + "\n");
-    processQueue(delay);
-  };
-
-  const processQueue = (delay: number) => {
-    if (typing.current) return;
-    if (terminalQueue.current.length === 0) return;
-
-    typing.current = true;
-    const terminalScreen = document.getElementById("terminalScreen");
-    if (!terminalScreen) {
-      typing.current = false;
-      return;
-    }
-    const text = terminalQueue.current.shift()!;
-    let index = 0;
-    function addCharacter() {
-      if (index < text.length) {
-        terminalScreen!.textContent += text.charAt(index);
-        index++;
-        terminalScreen!.scrollTop = terminalScreen!.scrollHeight;
-        setTimeout(addCharacter, delay);
-      } else {
-        typing.current = false;
-        processQueue(delay); // Process next item in the queue
-      }
-    }
-    addCharacter();
   };
 
   if (!loaded) {
@@ -200,7 +179,7 @@ function App() {
     <>
       <div className="main">
         <div className="agentInfo">
-          <p>Server Reset: {timer > 0 ? formatTime(timer) : "Time's up!"}</p>
+          <ServerResetTimer timer={timer} />
           <p>Agent: {agentData != undefined ? agentData.symbol : "no agent"}</p>
           <p>
             Credits: {agentData != undefined ? agentData.credits : "no agent"}
@@ -239,9 +218,19 @@ function App() {
           ))}
         </div>
       </div>
+      <button
+        onClick={() => setDialogOpen(true)}
+        style={{ marginBottom: "1rem" }}
+      >
+        Open Dialog
+      </button>
       <div className="bottomTextArea">
-        <div id="terminalScreen"></div>
+        <TerminalScreen ref={terminalRef} />
       </div>
+      <DialogBox open={dialogOpen} onClose={() => setDialogOpen(false)}>
+        <h2>The server has reset. Create a new agent to play.</h2>
+        <p>This is a dialog box. You can put any content here.</p>
+      </DialogBox>
     </>
   );
 }

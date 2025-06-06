@@ -237,3 +237,14 @@ export type ScanWaypointsResponse = {
     }>;
   };
 };
+
+export type AccountData = {
+  data: {
+    account: {
+      id: string;
+      email: string | null;
+      token: string;
+      createdAt: string;
+    };
+  };
+};
